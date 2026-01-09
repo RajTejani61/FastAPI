@@ -1,8 +1,18 @@
 from enum import Enum
 from typing import Annotated
-from fastapi import FastAPI, Query, Path, HTTPException, Cookie
 from pydantic import BaseModel, Field, EmailStr, field_validator, computed_field
 import json
+from fastapi import (
+    FastAPI,
+    Header, 
+    Query, 
+    Path, 
+    HTTPException, 
+    Cookie, 
+    APIRouter,
+    Response
+)
+from fastapi.responses import JSONResponse, RedirectResponse
 
 class Gender(Enum):
 	MALE = "male"
@@ -14,13 +24,16 @@ class Department(Enum):
     PHYSICS = "Physics"
 
 
-class AddStudent(BaseModel):
-    name: str = Field(min_length=3, max_length=50)
-    age: int = Field(gt=18, lt=100)
+class Student(BaseModel):
+    id : str = Field(description="ID of student", examples=['S001'])
+    name: str = Field(min_length=3, max_length=50, examples=['Abc'])
+    age: int = Field(gt=17, lt=100, examples=[18])
     gender: Gender
     department: Department
-    email: EmailStr
+    email: EmailStr = Field(description="Email of student", examples=["abc123@gmail.com"])
     password: str = Field(min_length=8, max_length=50)
+    height : Annotated[float, Field(gt=0, description="Height of student in meters")] 
+    weight : Annotated[float, Field(gt=0, description="Height of student in kgs")] 
     
     @field_validator("email")
     @classmethod
@@ -31,7 +44,7 @@ class AddStudent(BaseModel):
         domain_name = value.split('@')[-1]
         
         if domain_name not in valid_domains:
-            raise HTTPException(status_code=400, detail="not a valid email")
+            raise HTTPException(status_code=400, detail="Email domain must be gmail.com or student.com")
         
         return value
     
@@ -41,42 +54,55 @@ class AddStudent(BaseModel):
         confirm_pass = self.password
         return confirm_pass
     
-    model_config={
-        "json_schema_extra":{
-            "examples": [
-                {
-                    "name":"abc",
-                    "age":18,
-                    "gender":"male",
-                    "department":"computer science",
-                    "email":"abc@gmail.com",
-                    "password":"abc12345"
-                }
-            ]
-        }
-    }
+    @computed_field
+    @property
+    def bmi(self) -> float:
+        bmi = round(self.weight / (self.height**2), 2)
+        return bmi
+
+class Cookies(BaseModel):    
+    st_id : str | None = None
+    st_name : str | None = None
+    st_age : int | None = None
 
 
- 
 def load_data():
     with open("data.json", 'r') as f:
         data = json.load(f)
     return data
 
+def save_data(data):
+    with open("data.json", 'w') as f:
+        json.dump(data, f)
+
+
+student_router = APIRouter(
+    prefix="/student",
+    tags=["Student"]
+)
+
 app = FastAPI()
+
 
 @app.get('/')
 def root():
     return {"message" : "Welcome to ABC College"}
 
 
-@app.get("/student/view/")
-def view_all(st_id: Annotated[str | None, Cookie()] = None):
+@student_router.get("/view/")
+def view_all(
+    cookies: Annotated[Cookies, Cookie()] = None,
+    accept_encoding : Annotated[str | None,  Header()] = None
+    ):
     data = load_data()
-    return {"data" : data, "st_id" : st_id}
+    return {
+        "data" : data, 
+        "cookies" : cookies,
+        "accept_encoding" : accept_encoding 
+        }
 
 
-@app.get("/student/view/{student_id}")
+@student_router.get("/view/{student_id}", )
 def get_student_record(student_id: Annotated[str, Path(title="View Student data", description="ID of the student", examples="S001")]):
     data = load_data()
     if student_id in data:
@@ -84,7 +110,7 @@ def get_student_record(student_id: Annotated[str, Path(title="View Student data"
     raise HTTPException(status_code=404, detail="Student record not found")
 
 
-@app.get("/student/sort/")
+@student_router.get("/sort/")
 def sort_data(
     sort_by: Annotated[str, Query(description="Sort on the basis of name, age, department")] = "name", 
     order: Annotated[str, Query(description="Sort in asc or in desc order")] = "asc"
@@ -104,10 +130,25 @@ def sort_data(
     
     return sorted_data
 
-
-@app.post("/student/add/{student_id}")
-def add_student(student_id: str, student: AddStudent):
+    
+@student_router.post("/add")
+def add_student(student: Student):
     data = load_data()
     
-    data[student_id] = (student.model_dump())
-    # return data[student_id]
+    if student.id in data:
+        raise HTTPException(status_code=400, detail="Record already exists..")
+    
+    data[student.id] = student.model_dump(exclude=['id'], mode="json")
+    
+    save_data(data)
+    
+    return "Recoed Added successfully"         
+
+app.include_router(student_router)
+
+
+@app.get("/portal")
+async def get_portal(teleport: bool = False) -> Response:
+    if teleport:
+        return RedirectResponse(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    return JSONResponse(content={"message": "Here's your interdimensional portal."})

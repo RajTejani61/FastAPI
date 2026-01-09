@@ -1,0 +1,47 @@
+{
+	"S001": {
+		"name": "John Doe",
+		"age": 20,
+		"gender": "Male",
+		"department": "Physics",
+		"email": "john.doe@example.com",
+		"password": "John12345",
+		"height": 1.27,
+		"weight": 55,
+		"bmi": 33.06
+	},
+	"S002": {
+		"name": "Alice",
+		"age": 21,
+		"gender": "Male",
+		"department": "Computer Science",
+		"email": "alice@example.com",
+		"password": "@alice222",
+		"height": 1.65,
+		"weight": 90,
+		"bmi": 33.06
+	},
+	"S003": {
+		"name": "Bob",
+		"age": 18,
+		"gender": "Male",
+		"department": "Mathematics",
+		"email": "Bob266@gmail.com",
+		"password": "bob@12345",
+		"height": 1.6,
+		"weight": 45,
+		"bmi": 33.06
+	},
+	"S004": {
+		"name": "Harry",
+		"age": 18,
+		"gender": "male",
+		"department": "computer science",
+		"email": "harry000@gmail.com",
+		"password": "harry12345",
+		"height": 1.3,
+		"weight": 50.0,
+		"confirm_password": "harry12345",
+		"bmi": 29.59
+	}
+}
