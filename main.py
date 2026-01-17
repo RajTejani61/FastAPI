@@ -12,6 +12,7 @@ from fastapi import (
     APIRouter,
     Response
 )
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
 
 class Gender(Enum):
@@ -91,7 +92,7 @@ def root():
 
 @student_router.get("/view/")
 def view_all(
-    cookies: Annotated[Cookies, Cookie()] = None,
+    cookies: Annotated[Cookies, Cookie()] = None, # type: ignore
     accept_encoding : Annotated[str | None,  Header()] = None
     ):
     data = load_data()
@@ -103,7 +104,7 @@ def view_all(
 
 
 @student_router.get("/view/{student_id}", )
-def get_student_record(student_id: Annotated[str, Path(title="View Student data", description="ID of the student", examples="S001")]):
+def get_student_record(student_id: Annotated[str, Path(title="View Student data", description="ID of the student", examples=["S001"])]):
     data = load_data()
     if student_id in data:
         return {"message" : "Student Retrieved Successfully", "student_id": student_id, "student": data[student_id]}
@@ -138,7 +139,7 @@ def add_student(student: Student):
     if student.id in data:
         raise HTTPException(status_code=400, detail="Record already exists..")
     
-    data[student.id] = student.model_dump(exclude=['id'], mode="json")
+    data[student.id] = student.model_dump(exclude={"id"}, mode="json")
     
     save_data(data)
     
@@ -152,3 +153,30 @@ async def get_portal(teleport: bool = False) -> Response:
     if teleport:
         return RedirectResponse(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
     return JSONResponse(content={"message": "Here's your interdimensional portal."})
+
+@app.put("/update/{id}")
+def update_student(id: str, student: Student):
+    data = load_data()
+    
+    if id not in data:
+        raise HTTPException(status_code=404, detail="Record not found")
+    
+    data[id] = student.model_dump(exclude={'id'}, mode="json")
+    
+    save_data(data)
+    
+    return "Record updated successfully"
+
+
+@app.delete("/delete/{id}")
+def delete_student(id: str):
+    data = load_data()
+    
+    if id not in data:
+        raise HTTPException(status_code=404, detail="Record not found")
+    
+    del data[id]
+    
+    save_data(data)
+    
+    return "Record deleted successfully"
